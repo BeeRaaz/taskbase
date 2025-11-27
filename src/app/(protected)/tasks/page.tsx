@@ -8,14 +8,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import TaskCard from "@/components/TaskCard";
-import { useRouter } from "next/navigation";
 
 export default function TasksPage() {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[] | []>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
-
-  const router = useRouter();
 
   useEffect(() => {
     // wait until user is loaded
@@ -41,10 +38,6 @@ export default function TasksPage() {
 
     fetchUsersTasks();
   }, [user]);
-
-  if (!session) {
-    router.push("/auth/login");
-  }
 
   return (
     <>
