@@ -11,16 +11,17 @@ import {
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useTaskMutations } from "@/hooks/useTaskMutations";
+import { Loader2 } from "lucide-react";
 
 export default function AddTaskForm() {
   const { user } = useAuth();
+  const { addTaskMutation } = useTaskMutations();
 
   // states
   const [taskTitle, setTaskTitle] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // router
@@ -31,57 +32,68 @@ export default function AddTaskForm() {
     e.preventDefault();
     setError(null);
 
-    if (!taskTitle.trim()) {
-      setError("Task title cannot be empty.")
+    const trimmedTitle = taskTitle.trim();
+
+    if (!trimmedTitle) {
+      setError("Task title cannot be empty.");
       return;
     }
 
     if (!user) {
-      setError("You must be logged in to add a task")
+      setError("You must be logged in to add a task");
       return;
     }
-    
-    setLoading(true);
-    const supabase = createClient();
 
-    const { error } = await supabase.from("tasks").insert({
-      title: taskTitle,
-      user_id: user?.id,
+    addTaskMutation.mutate(trimmedTitle, {
+      onSuccess: () => {
+        router.push("/tasks");
+      },
     });
-
-    setLoading(false);
-
-    if (error) {
-      console.error("Error while adding task to database", error);
-      setError(error.message);
-    } else {
-      router.push("/tasks");
-    }
   };
 
   return (
     <>
-      <Card className="w-full max-w-xs">
+      <Card className="w-full max-w-sm shadow-xl">
         <CardHeader>
-          <CardTitle>Add Task</CardTitle>
-          <CardDescription>Add a new task</CardDescription>
+          <CardTitle>Add New Task</CardTitle>
+          <CardDescription>
+            What do you want to get done today?
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAddTask} className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="task-title">Title:</Label>
+          <form onSubmit={handleAddTask} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="task-title">Title</Label>
               <Input
                 id="task-title"
                 name="task-title"
                 type="text"
-                placeholder="Add task title"
+                placeholder="e.g., Buy groceries"
                 value={taskTitle}
-                onChange={(e) => setTaskTitle(e.target.value)}
+                onChange={(e) => {
+                  setTaskTitle(e.target.value);
+                  if (error) setError(null);
+                }}
+                className={error ? "border-destructive" : ""}
+                autoFocus
               />
-              {error && <p className="text-red-600">{error}</p>}
+              {error && (
+                <p className="text-sm font-medium text-destructive">{error}</p>
+              )}
             </div>
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Adding task..." : "Add Task"}
+            <Button
+              type="submit"
+              disabled={addTaskMutation.isPending}
+              className="w-full"
+            >
+              {addTaskMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Create Task"
+              )}
             </Button>
           </form>
         </CardContent>

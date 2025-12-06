@@ -1,74 +1,110 @@
 "use client";
 
+import { useState } from "react";
 import Container from "@/components/Container";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { Plus } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import TaskCard from "@/components/TaskCard";
+import { Plus, ListFilter } from "lucide-react";
+import TaskItem from "@/components/TaskItem";
+import { useTasks } from "@/hooks/useTasks";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+type FilterType = "all" | "active" | "completed";
 
 export default function TasksPage() {
-  const { user } = useAuth();
-  const [tasks, setTasks] = useState<Task[] | []>([]);
-  const [loadingTasks, setLoadingTasks] = useState(false);
+  const { data: tasks, isLoading, error } = useTasks();
+  const [filter, setFilter] = useState<FilterType>("all");
 
-  useEffect(() => {
-    // wait until user is loaded
-    if (!user) return;
+  const filteredTasks = tasks?.filter((task) => {
+    if (filter === "active") return !task.is_completed;
+    if (filter === "completed") return task.is_completed;
+    return true;
+  });
 
-    const fetchUsersTasks = async () => {
-      setLoadingTasks(true);
-      const supabase = createClient();
-
-      const { data, error } = await supabase
-        .from("tasks")
-        .select()
-        .eq("user_id", user?.id);
-
-      if (error) {
-        console.log("error fetching the tasks", error);
-      } else {
-        setTasks(data);
-      }
-
-      setLoadingTasks(false);
-    };
-
-    fetchUsersTasks();
-  }, [user]);
+  if (error) {
+    return (
+      <Container className="pt-28">
+        <div className="text-red-500">Error loading tasks.</div>
+      </Container>
+    );
+  }
 
   return (
-    <>
-      <section className="pt-28 pb-10">
-        <Container>
-          <div className="flex flex-wrap justify-between items-center gap-5 mb-5">
-            <h1>Your Tasks</h1>
+    <section className="pt-28 pb-10 min-h-screen">
+      <Container>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Your Tasks</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your daily goals efficiently.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <ListFilter className="w-4 h-4" />
+                  <span className="capitalize">{filter}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setFilter("all")}>
+                  All
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilter("active")}>
+                  Active
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilter("completed")}>
+                  Completed
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Link href={"/tasks/add"}>
               <Button>
-                <Plus />
-                Add Task
+                <Plus className="w-4 h-4 mr-2" />
+                New Task
               </Button>
             </Link>
           </div>
-          <div>
-            {loadingTasks ? (
-              <p>Loading tasks...</p>
-            ) : tasks.length === 0 ? (
-              <p>No tasks yet. Add one!</p>
-            ) : (
-              <ul className="space-y-3">
-                {tasks.map((task: Task) => (
-                  <li key={task.id}>
-                    <TaskCard task={task} setTasks={setTasks} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Container>
-      </section>
-    </>
+        </div>
+
+        <div className="space-y-4">
+          {isLoading ? (
+            // Skeleton Loader
+            Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center p-4 border rounded-xl gap-4"
+              >
+                <Skeleton className="h-5 w-5 rounded-md" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-3/4" />
+                </div>
+                <Skeleton className="h-8 w-8 rounded-full" />
+              </div>
+            ))
+          ) : filteredTasks?.length === 0 ? (
+            <div className="text-center py-20 border-2 border-dashed rounded-xl opacity-70">
+              <p className="text-lg font-medium">No tasks found</p>
+              <p className="text-sm text-muted-foreground">
+                {filter === "all"
+                  ? "Get started by adding a new task!"
+                  : `No ${filter} tasks to display.`}
+              </p>
+            </div>
+          ) : (
+            filteredTasks?.map((task) => <TaskItem key={task.id} task={task} />)
+          )}
+        </div>
+      </Container>
+    </section>
   );
 }

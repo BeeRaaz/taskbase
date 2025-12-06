@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import QueryProvider from "@/components/providers/QueryProvider";
+import { Toaster } from "sonner";
 import Header from "@/components/Header";
 
 const geistSans = Geist({
@@ -22,14 +24,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} antialiased w-full min-w-80`}>
-        <AuthProvider>
-          <div className="w-full relative overflow-clip">
-            <Header />
-            <div>
-              <main>{children}</main>
+        <QueryProvider>
+          <AuthProvider>
+            <div className="w-full relative overflow-clip">
+              <Header />
+              <div>
+                <main>{children}</main>
+              </div>
             </div>
-          </div>
-        </AuthProvider>
+          </AuthProvider>
+          <Toaster richColors position="top-center" />
+        </QueryProvider>
       </body>
     </html>
   );
