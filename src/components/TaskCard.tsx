@@ -5,6 +5,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dispatch, SetStateAction, useState } from "react";
+import { Task } from "@/types";
 import {
   Dialog,
   DialogContent,

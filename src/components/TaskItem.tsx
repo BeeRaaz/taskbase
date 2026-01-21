@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Task } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,

@@ -1,7 +1,37 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, SupabaseConnectionError } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { Task } from "@/types";
+
+function getErrorMessage(err: unknown, fallbackMessage: string): string {
+  if (err instanceof SupabaseConnectionError) {
+    return "Connection error. Please check your configuration.";
+  }
+
+  if (err instanceof Error) {
+    const message = err.message.toLowerCase();
+    if (message.includes("network") || message.includes("fetch") || message.includes("failed to fetch")) {
+      return "Network error. Please check your connection.";
+    }
+    if (message.includes("jwt") || message.includes("token") || message.includes("unauthorized")) {
+      return "Session expired. Please log in again.";
+    }
+  }
+
+  // Check for Supabase PostgrestError codes
+  if (typeof err === "object" && err !== null && "code" in err) {
+    const code = (err as { code: string }).code;
+    if (code === "PGRST301" || code === "401") {
+      return "Session expired. Please log in again.";
+    }
+    if (code === "PGRST204") {
+      return "Item not found.";
+    }
+  }
+
+  return fallbackMessage;
+}
 
 export function useTaskMutations() {
   const supabase = createClient();
@@ -42,7 +72,7 @@ export function useTaskMutations() {
       if (context?.previousTasks) {
         queryClient.setQueryData(["tasks", user?.id], context.previousTasks);
       }
-      toast.error("Failed to add task");
+      toast.error(getErrorMessage(err, "Failed to add task"));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", user?.id] });
@@ -74,7 +104,7 @@ export function useTaskMutations() {
       if (context?.previousTasks) {
         queryClient.setQueryData(["tasks", user?.id], context.previousTasks);
       }
-      toast.error("Failed to delete task");
+      toast.error(getErrorMessage(err, "Failed to delete task"));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", user?.id] });
@@ -108,7 +138,7 @@ export function useTaskMutations() {
       if (context?.previousTasks) {
         queryClient.setQueryData(["tasks", user?.id], context.previousTasks);
       }
-      toast.error("Failed to update task");
+      toast.error(getErrorMessage(err, "Failed to update task"));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", user?.id] });
@@ -148,7 +178,7 @@ export function useTaskMutations() {
       if (context?.previousTasks) {
         queryClient.setQueryData(["tasks", user?.id], context.previousTasks);
       }
-      toast.error("Failed to update status");
+      toast.error(getErrorMessage(err, "Failed to update status"));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", user?.id] });
